@@ -1,0 +1,53 @@
+# Snyk scans: dependencies (open source), source (Snyk Code), container and IaC.
+# SNYK_TOKEN is a repository secret (least-privilege service-account token);
+# it never appears in source. Results upload as SARIF to code scanning.
+name: Security
+on:
+  push: { branches: [main] }
+  pull_request:
+  schedule: [{ cron: "0 6 * * 1" }]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  snyk:
+    runs-on: ubuntu-latest
+    # Enable by setting repository variable SNYK_ENABLED=true and secret SNYK_TOKEN.
+    if: ${{ vars.SNYK_ENABLED == 'true' }}
+    env:
+      SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
+      - name: Snyk Open Source (dependencies)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        with:
+          args: --severity-threshold=high --sarif-file-output=snyk-deps.sarif
+      - name: Snyk Code (source)
+        uses: snyk/actions/node@master
+        continue-on-error: true
+        with:
+          command: code test
+          args: --severity-threshold=high --sarif-file-output=snyk-code.sarif
+      - name: Snyk IaC (Dockerfile, compose, workflows)
+        uses: snyk/actions/iac@master
+        continue-on-error: true
+        with:
+          args: --severity-threshold=high --sarif-file-output=snyk-iac.sarif
+      - name: Build image for container scan
+        run: docker build -t missioncontrol:ci .
+      - name: Snyk Container
+        uses: snyk/actions/docker@master
+        continue-on-error: true
+        with:
+          image: missioncontrol:ci
+          args: --file=Dockerfile --severity-threshold=high --sarif-file-output=snyk-container.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: . }
+      # Fail the job only after all reports are uploaded, so findings are visible.
+      - name: Gate on high-severity dependency + code findings
+        run: npx snyk test --severity-threshold=high && npx snyk code test --severity-threshold=high

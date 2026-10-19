@@ -1,0 +1,31 @@
+{
+  "name": "MissionControl — approved leads to Google Sheets",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "missioncontrol-leads", "authentication": "headerAuth", "responseMode": "responseNode", "options": {} },
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.2,
+      "position": [0, 0],
+      "credentials": { "httpHeaderAuth": { "name": "MissionControl header (name: x-missioncontrol-secret)" } }
+    },
+    {
+      "parameters": { "operation": "appendOrUpdate", "documentId": { "__rl": true, "mode": "url", "value": "REPLACE_WITH_YOUR_SHEET_URL" }, "sheetName": { "__rl": true, "mode": "name", "value": "Leads" }, "columns": { "mappingMode": "autoMapInputData", "matchingColumns": ["idempotencyKey"] }, "options": {} },
+      "name": "Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [260, 0]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { ok: true } }}", "options": {} },
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [520, 0]
+    }
+  ],
+  "connections": {
+    "Webhook": { "main": [[{ "node": "Google Sheets", "type": "main", "index": 0 }]] },
+    "Google Sheets": { "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]] }
+  }
+}
