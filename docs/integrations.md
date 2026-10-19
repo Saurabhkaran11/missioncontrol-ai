@@ -1,11 +1,11 @@
 # Integration matrix
 
-Status is computed at runtime and shown on **Integrations**. Nothing below was exercised against a live sponsor account in this build — no credentials were available. "Verified" refers to documentation/SDK verification (see `docs/research/sponsor-docs.md`).
+Status is computed at runtime and shown on **Integrations**. As of 2026-10-19, **RocketRide and Masky.AI were verified against live accounts**; the others were not (no credentials). "Verified" refers to documentation/SDK verification (see `docs/research/sponsor-docs.md`).
 
 | Provider | Implementation | Docs/SDK verified | Run live in this build | Default status |
 |---|---|---|---|---|
-| RocketRide | `src/integrations/rocketride` — `rocketride` npm SDK: `connect`, `ping`, `getServices`, `use({pipeline, token, ttl})`, `send`, `terminate` | Yes (SDK installed; methods confirmed on the class) | No | mock (local demo orchestrator) |
-| Masky.AI | `src/integrations/masky` — `GET /api/avatars` (health), `GET /api/avatars/{id}/images` | Yes | No (contract-tested with a fake fetch) | mock (local avatars + opt-in browser TTS) |
+| RocketRide | `src/integrations/rocketride` — `rocketride` npm SDK: `connect`, `ping`, `getServices`, `use({pipeline, token, ttl})`, `send`, `terminate` | Yes | **Yes** — cloud `ping`, `getServices`, and full missions run task-by-task on `rocketride/missioncontrol-task.pipe` | mock until `ORCHESTRATOR_PROVIDER=rocketride` |
+| Masky.AI | `src/integrations/masky` — `GET /api/avatars` (health), `GET /api/avatars/{id}/images` | Yes | **Yes** — key check + 5 synthetic agent avatars (Jordan local: Creator plan limit) | mock until `AVATAR_PROVIDER=masky` |
 | n8n | `src/integrations/n8n` — POST to Webhook node, Header Auth + HMAC signature + Idempotency-Key; `/healthz` | Yes | No (contract-tested with a fake fetch) | mock |
 | Web research | `src/integrations/research/http.ts` — plain HTTP, SSRF-guarded, domains listed on the mission only | n/a | Code path unit-tested; not run against the public web in tests | mock (demo dataset) |
 | Sandbox | `src/integrations/sandbox/demo.ts` — reviewed programs only, worker thread, no env | n/a | Yes (tests) | mock |
@@ -14,7 +14,7 @@ Status is computed at runtime and shown on **Integrations**. Nothing below was e
 | Snyk | CI workflow + `scripts/security-scan.sh` | Yes | No (no token locally) | not configured until a scan artifact exists |
 
 ## RocketRide
-Set `ORCHESTRATOR_PROVIDER=rocketride`, `ROCKETRIDE_API_KEY`, `ROCKETRIDE_BASE_URL`, `ROCKETRIDE_PIPELINE_FILE`. Each task envelope (type, agent, ids — no secrets) is sent to your pipeline under a fresh `tk_` token; the run token is stored on the mission. Typed artifacts are still produced and validated by MissionControl. **No Masky node exists in RocketRide's catalog** (verified), so Masky is called directly. RocketRide's native `tool_n8n` node could replace our webhook call; we did not, to keep a single approval-gated outbox.
+Set `ORCHESTRATOR_PROVIDER=rocketride`, `ROCKETRIDE_API_KEY`, `ROCKETRIDE_BASE_URL=https://api.rocketride.ai`, `ROCKETRIDE_PIPELINE_FILE=rocketride/missioncontrol-task.pipe` (webhook → response_text, based on the official `examples/n8n/n8n-roundtrip-target.pipe`; the envelope is sent as `text/plain` so it flows through the text lane). Each task envelope (type, agent, ids — no secrets) is sent to your pipeline under a fresh `tk_` token; the run token is stored on the mission. Typed artifacts are still produced and validated by MissionControl. **No Masky node exists in RocketRide's catalog** (verified), so Masky is called directly. RocketRide's native `tool_n8n` node could replace our webhook call; we did not, to keep a single approval-gated outbox.
 
 ## Masky.AI
 `AVATAR_PROVIDER=masky`, `MASKY_API_KEY`, `MASKY_AVATAR_IDS=alex=<id>,maya=<id>,…`. Use synthetic avatars you have rights to; never clone a real person. Speech requires the conversation-turn flow (costs credits) and is not wired; the UI uses opt-in browser speech labelled "browser TTS (not Masky)".

@@ -1,0 +1,21 @@
+{
+  "components": [
+    {
+      "id": "webhook_1",
+      "provider": "webhook",
+      "name": "MissionControl task envelope",
+      "config": { "hideForm": true, "mode": "Source", "parameters": {}, "type": "webhook" },
+      "ui": { "position": { "x": 20, "y": 200 }, "nodeType": "default", "formDataValid": true }
+    },
+    {
+      "id": "response_text_1",
+      "provider": "response_text",
+      "name": "Acknowledge task",
+      "config": { "laneName": "text" },
+      "input": [{ "lane": "text", "from": "webhook_1" }],
+      "ui": { "position": { "x": 260, "y": 200 }, "nodeType": "default", "formDataValid": true }
+    }
+  ],
+  "project_id": "6f1c2a9e-4d7b-4c1e-9a35-0b8e2d4f7c11",
+  "version": 1
+}

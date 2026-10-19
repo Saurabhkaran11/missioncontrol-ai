@@ -127,7 +127,7 @@ export class RocketRideOrchestrator implements AgentOrchestrator {
             idempotencyKey: task.idempotencyKey,
           }),
           { name: "task.json" },
-          "application/json",
+          "text/plain", // text lane carries the envelope: webhook → response_text
         );
       } finally {
         await c.terminate(token).catch(() => undefined);
