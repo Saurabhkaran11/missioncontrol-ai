@@ -159,41 +159,38 @@ export async function listIntegrations(
       canConfigure,
     });
   };
+  // Live providers get a real health check on every view; demo ones say so.
+  const demo = (message: string) => ({
+    status: "mock" as IntegrationStatus,
+    message,
+    checkedAt: null,
+  });
   await add(
     "rocketride",
-    {
-      status: p.orchestrator.mode === "demo" ? "mock" : "not_configured",
-      message:
-        p.orchestrator.mode === "demo"
-          ? "Using the local demo orchestrator. Set ORCHESTRATOR_PROVIDER=rocketride with ROCKETRIDE_* to enable."
-          : "Configured — run a test to check connectivity.",
-      checkedAt: null,
-    },
+    p.orchestrator.mode === "demo"
+      ? demo(
+          "Using the local demo orchestrator. Set ORCHESTRATOR_PROVIDER=rocketride with ROCKETRIDE_* to enable.",
+        )
+      : await p.orchestrator.health(),
     p.orchestrator.mode,
   );
   await add(
     "masky",
-    {
-      status: p.avatars.mode === "demo" ? "mock" : "not_configured",
-      message:
-        p.avatars.mode === "demo"
-          ? "Local initials avatars + opt-in browser TTS. Set AVATAR_PROVIDER=masky and MASKY_* to use Masky avatars."
-          : "Configured — run a test.",
-      checkedAt: null,
-    },
+    p.avatars.mode === "demo"
+      ? demo(
+          "Local initials avatars + opt-in browser TTS. Set AVATAR_PROVIDER=masky and MASKY_* to use Masky avatars.",
+        )
+      : await p.avatars.health(),
     p.avatars.mode,
   );
   const sink = await resolveLeadSink(db, orgId);
   await add(
     "n8n",
-    {
-      status: sink.mode === "demo" ? "mock" : "not_configured",
-      message:
-        sink.mode === "demo"
-          ? "Mock connection: approved exports are recorded locally and labelled demo/mock."
-          : "Live webhook configured — run a test.",
-      checkedAt: null,
-    },
+    sink.mode === "demo"
+      ? demo(
+          "Mock connection: approved exports are recorded locally and labelled demo/mock.",
+        )
+      : await sink.health(),
     sink.mode,
     true,
   );

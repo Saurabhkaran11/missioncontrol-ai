@@ -1,12 +1,12 @@
 # Integration matrix
 
-Status is computed at runtime and shown on **Integrations**. As of 2026-10-19, **RocketRide and Masky.AI were verified against live accounts**; the others were not (no credentials). "Verified" refers to documentation/SDK verification (see `docs/research/sponsor-docs.md`).
+Status is computed at runtime and shown on **Integrations**. As of 2026-10-19, **RocketRide, Masky.AI and n8n were verified against live accounts**; research (live HTTP), Tenki and Snyk were not. "Verified" refers to documentation/SDK verification (see `docs/research/sponsor-docs.md`).
 
 | Provider | Implementation | Docs/SDK verified | Run live in this build | Default status |
 |---|---|---|---|---|
 | RocketRide | `src/integrations/rocketride` — `rocketride` npm SDK: `connect`, `ping`, `getServices`, `use({pipeline, token, ttl})`, `send`, `terminate` | Yes | **Yes** — cloud `ping`, `getServices`, and full missions run task-by-task on `rocketride/missioncontrol-task.pipe` | mock until `ORCHESTRATOR_PROVIDER=rocketride` |
 | Masky.AI | `src/integrations/masky` — `GET /api/avatars` (health), `GET /api/avatars/{id}/images` | Yes | **Yes** — key check + 5 synthetic agent avatars (Jordan local: Creator plan limit) | mock until `AVATAR_PROVIDER=masky` |
-| n8n | `src/integrations/n8n` — POST to Webhook node, Header Auth + HMAC signature + Idempotency-Key; `/healthz` | Yes | No (contract-tested with a fake fetch) | mock |
+| n8n | `src/integrations/n8n` — POST to Webhook node, Header Auth + HMAC signature + Idempotency-Key; `/healthz` | Yes | **Yes** — n8n Cloud webhook: 403 without/with wrong secret, 200 with secret, repeat send idempotent, one approved lead exported end-to-end from the app | mock until `LIVE_EXTERNAL_ACTIONS_ENABLED=true` |
 | Web research | `src/integrations/research/http.ts` — plain HTTP, SSRF-guarded, domains listed on the mission only | n/a | Code path unit-tested; not run against the public web in tests | mock (demo dataset) |
 | Sandbox | `src/integrations/sandbox/demo.ts` — reviewed programs only, worker thread, no env | n/a | Yes (tests) | mock |
 | Tenki | Not implemented (SDK `@tenkicloud/sandbox` exists per docs) | Partially | No | not configured when selected |

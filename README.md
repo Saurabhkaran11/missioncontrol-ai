@@ -36,7 +36,7 @@ See `docs/integrations.md`. Summary:
 - **Mission engine** — real: the task graph, durable queue, retries, SSE, approvals, outbox, and Sam's evidence checks.
 - **Demo research** — uses fictional `.example` companies.
 - **Live HTTP research** — available; it is SSRF-guarded.
-- **Sponsor adapters** — RocketRide (SDK) and Masky (REST) are verified live; n8n (webhook) is implemented from verified docs but not yet run against a live instance.
+- **Sponsor adapters** — RocketRide (SDK), Masky (REST) and n8n (webhook) are all verified live. The integrations page runs a real health check for each live provider.
 - **Not implemented:**
   - the Tenki sandbox;
   - Masky speech (browser TTS is used and labelled as such);
