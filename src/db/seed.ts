@@ -1,3 +1,4 @@
+import { providers } from "@/integrations";
 import { and, eq, inArray } from "drizzle-orm";
 import crypto from "node:crypto";
 import { schema, type DB } from "./client";
@@ -207,7 +208,7 @@ export async function seedOrganization(
       reason: "Seeded sample decision: not a fit this quarter",
     });
   noPace.add(mission.id);
-  await requestExport(db, auth, mission.id);
+  await requestExport(db, auth, mission.id, { forceMock: true });
   await drainMission(db, mission.id);
   noPace.delete(mission.id);
 
@@ -231,6 +232,8 @@ export async function seedOrganization(
         requestedCount: 8,
         mode: "demo",
         isSample: true,
+        // This one runs for real on the configured orchestrator (e.g. RocketRide).
+        orchestrator: providers().orchestrator.id,
       })
       .returning();
     await createTaskGraph(db, m2);

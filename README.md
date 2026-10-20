@@ -11,6 +11,11 @@ A supervised AI operations team for early-stage B2B SaaS founders. You state a g
 
 Hackathon prototype (Business, Growth & Productivity track). **Not production-ready**; see `docs/security.md` for residual risks.
 
+## Demo & submission
+- **Demo video:** [`demo/missioncontrol-demo.webm`](demo/missioncontrol-demo.webm) (2 min, captioned)
+- **Description and demo script:** [`docs/submission.md`](docs/submission.md)
+- **Get a live URL:** [`docs/deploy-live.md`](docs/deploy-live.md)
+
 ## Quick start (zero credentials)
 ```bash
 npm install

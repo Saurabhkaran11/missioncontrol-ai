@@ -35,6 +35,7 @@ import {
   assertAcyclic,
 } from "@/features/state-machine";
 import { providers } from "@/integrations";
+import { LocalDemoOrchestrator } from "@/integrations/rocketride";
 import type { LeadExportPayload } from "@/integrations/types";
 import { classifyError, AppError } from "@/shared/errors";
 import { env } from "@/shared/env";
@@ -128,6 +129,7 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Demo pacing makes the live mission room watchable; seeding skips it.
 const g = globalThis as unknown as { __mcNoPace?: Set<string> };
 export const noPace = (g.__mcNoPace ??= new Set<string>());
+const seedOrchestrator = new LocalDemoOrchestrator();
 let pacingMission: string | null = null;
 const pace = () =>
   pacingMission && noPace.has(pacingMission)
@@ -204,15 +206,13 @@ async function addTask(
     idempotencyKey: `${mission.id}:${t.type}:${(n[0]?.c ?? 0) + 1}`,
   });
   if (t.deps.length)
-    await tx
-      .insert(schema.taskDependencies)
-      .values(
-        t.deps.map((d) => ({
-          organizationId: mission.organizationId,
-          taskId: id,
-          dependsOnTaskId: d,
-        })),
-      );
+    await tx.insert(schema.taskDependencies).values(
+      t.deps.map((d) => ({
+        organizationId: mission.organizationId,
+        taskId: id,
+        dependsOnTaskId: d,
+      })),
+    );
   return id;
 }
 
@@ -379,7 +379,12 @@ export async function runTask(db: DB, taskId: string) {
   if (!handler)
     throw new AppError("unknown_task", `No handler for ${task.taskType}`);
   try {
-    const { output, externalRunId } = await providers().orchestrator.run(
+    // Seeding replays fixed sample history locally; real missions use the
+    // configured orchestrator (e.g. RocketRide).
+    const orchestrator = noPace.has(mission.id)
+      ? seedOrchestrator
+      : providers().orchestrator;
+    const { output, externalRunId } = await orchestrator.run(
       {
         taskId,
         missionId: mission.id,
@@ -398,7 +403,7 @@ export async function runTask(db: DB, taskId: string) {
     if (externalRunId)
       await db
         .update(schema.missions)
-        .set({ externalRunId, orchestrator: providers().orchestrator.id })
+        .set({ externalRunId, orchestrator: orchestrator.id })
         .where(eq(schema.missions.id, mission.id));
     await updateProgress(db, mission.id);
     await scheduleReady(db, mission.id);
@@ -597,7 +602,11 @@ const HANDLERS: Record<TaskType, Handler> = {
       geography: mission.geography,
       exclusions: mission.exclusions,
       count: mission.requestedCount,
-      seed: noPace.has(mission.id) ? "sample" : mission.id,
+      seed: noPace.has(mission.id)
+        ? "sample"
+        : mission.isSample && mission.title.includes("(live run)")
+          ? "sample-live"
+          : mission.id,
       seedDomains,
     } as never);
     await pace();
@@ -769,21 +778,19 @@ const HANDLERS: Record<TaskType, Handler> = {
     await db.transaction(async (tx) => {
       for (const d of drafts) {
         const id = crypto.randomUUID();
-        await tx
-          .insert(schema.outreachDrafts)
-          .values({
-            id,
-            organizationId: mission.organizationId,
-            missionId: mission.id,
-            leadId: d.lead.id,
-            version: 1,
-            subject: d.subject,
-            body: d.body,
-            personalizations: d.personalizations,
-            status: "draft",
-            authorAgent: "sophia",
-            generator: writer.id,
-          });
+        await tx.insert(schema.outreachDrafts).values({
+          id,
+          organizationId: mission.organizationId,
+          missionId: mission.id,
+          leadId: d.lead.id,
+          version: 1,
+          subject: d.subject,
+          body: d.body,
+          personalizations: d.personalizations,
+          status: "draft",
+          authorAgent: "sophia",
+          generator: writer.id,
+        });
         await tx
           .update(schema.leads)
           .set({ currentDraftId: id })
@@ -851,22 +858,20 @@ const HANDLERS: Record<TaskType, Handler> = {
           .update(schema.outreachDrafts)
           .set({ status: "superseded" })
           .where(eq(schema.outreachDrafts.id, draft.id));
-        await tx
-          .insert(schema.outreachDrafts)
-          .values({
-            id,
-            organizationId: mission.organizationId,
-            missionId: mission.id,
-            leadId,
-            version: draft.version + 1,
-            subject: out.subject,
-            body: out.body,
-            personalizations,
-            status: "draft",
-            revisionOfId: draft.id,
-            authorAgent: "sophia",
-            generator: providers().drafts.id,
-          });
+        await tx.insert(schema.outreachDrafts).values({
+          id,
+          organizationId: mission.organizationId,
+          missionId: mission.id,
+          leadId,
+          version: draft.version + 1,
+          subject: out.subject,
+          body: out.body,
+          personalizations,
+          status: "draft",
+          revisionOfId: draft.id,
+          authorAgent: "sophia",
+          generator: providers().drafts.id,
+        });
         await tx
           .update(schema.leads)
           .set({ currentDraftId: id })
@@ -961,6 +966,12 @@ const HANDLERS: Record<TaskType, Handler> = {
       duplicates: count("duplicate"),
       exported: deliveries.filter((d) => d.state === "delivered").length,
       exportMode: deliveries[0]?.mode ?? null,
+      exportedLive: deliveries.filter(
+        (d) => d.state === "delivered" && d.mode === "live",
+      ).length,
+      exportedMock: deliveries.filter(
+        (d) => d.state === "delivered" && d.mode === "mock",
+      ).length,
       pendingApprovals: pending.length,
       sources: sources[0]?.c ?? 0,
     };
@@ -974,7 +985,7 @@ const HANDLERS: Record<TaskType, Handler> = {
       taskId: task.id,
       agent: "alex",
       type: "summary",
-      message: `Alex: ${summary.exported} approved record${summary.exported === 1 ? "" : "s"} ${summary.exportMode === "mock" ? "recorded by the mock n8n connection (not sent)" : "delivered to n8n"}; ${summary.needsReview} need review; ${summary.pendingApprovals} still awaiting approval.`,
+      message: `Alex: ${[summary.exportedLive ? `${summary.exportedLive} approved record${summary.exportedLive === 1 ? "" : "s"} delivered to n8n` : "", summary.exportedMock ? `${summary.exportedMock} recorded by the mock connection (not sent)` : ""].filter(Boolean).join(", ") || "nothing exported yet"}; ${summary.needsReview} need review; ${summary.pendingApprovals} still awaiting approval.`,
       data: summary,
     });
     await setMissionStatus(
@@ -1018,17 +1029,15 @@ async function samReview({ db, mission, task }: HandlerCtx, round: number) {
       // Second round: anything still failing goes to a human, not back to Sophia.
       if (round > 1 && verdict === "revise") verdict = "block";
       tally[verdict]++;
-      await tx
-        .insert(schema.reviewFindings)
-        .values({
-          organizationId: mission.organizationId,
-          missionId: mission.id,
-          leadId: lead.id,
-          draftId: draft.id,
-          round,
-          verdict,
-          findings,
-        });
+      await tx.insert(schema.reviewFindings).values({
+        organizationId: mission.organizationId,
+        missionId: mission.id,
+        leadId: lead.id,
+        draftId: draft.id,
+        round,
+        verdict,
+        findings,
+      });
       await tx
         .update(schema.outreachDrafts)
         .set({ status: verdict === "pass" ? "ready" : "needs_revision" })
@@ -1087,13 +1096,11 @@ async function samReview({ db, mission, task }: HandlerCtx, round: number) {
         position: task.position + 4,
       });
       if (approvalTask)
-        await tx
-          .insert(schema.taskDependencies)
-          .values({
-            organizationId: mission.organizationId,
-            taskId: approvalTask.id,
-            dependsOnTaskId: recheck,
-          });
+        await tx.insert(schema.taskDependencies).values({
+          organizationId: mission.organizationId,
+          taskId: approvalTask.id,
+          dependsOnTaskId: recheck,
+        });
     }
   });
   await emit(db, {
@@ -1219,13 +1226,24 @@ export async function processDeliveries(
       ),
     );
   const { resolveLeadSink } = await import("@/server/services/integrations");
-  const sink = await resolveLeadSink(db, mission.organizationId);
+  const liveSink = await resolveLeadSink(db, mission.organizationId);
+  const { MockLeadSink } = await import("@/integrations/n8n");
+  const mockSink = new MockLeadSink();
+  // Each delivery keeps the mode chosen when it was queued: a "mock" row is
+  // never upgraded to a live send just because live exports were enabled later.
+  const sinkFor = (mode: string) => (mode === "mock" ? mockSink : liveSink);
+  const sink = liveSink;
   const result = {
     delivered: 0,
     skipped: 0,
     retryable: 0,
     dead: 0,
-    mode: sink.mode === "demo" ? "mock" : "live",
+    mode:
+      rows.length && rows.every((r) => r.mode === "mock")
+        ? "mock"
+        : sink.mode === "demo"
+          ? "mock"
+          : "live",
   };
   for (const d of rows) {
     const [approval] = await db
@@ -1298,7 +1316,7 @@ export async function processDeliveries(
       .update(schema.webhookDeliveries)
       .set({ state: "delivering", attempts: d.attempts + 1 })
       .where(eq(schema.webhookDeliveries.id, d.id));
-    const r = await sink.deliver(payload);
+    const r = await sinkFor(d.mode).deliver(payload);
     if (r.ok) {
       await db
         .update(schema.webhookDeliveries)

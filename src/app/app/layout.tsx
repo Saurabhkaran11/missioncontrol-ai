@@ -7,6 +7,7 @@ import { AppNav } from "@/components/app-nav";
 import { LogoutButton } from "@/components/client-actions";
 import { Logo } from "@/components/logo";
 import { Badge } from "@/components/ui";
+import { env } from "@/shared/env";
 
 export const dynamic = "force-dynamic";
 
@@ -54,8 +55,10 @@ export default async function AppLayout({
           >
             <Badge tone="sample">Sample workspace</Badge>
             All companies, sources and the founder are fictional (.example
-            domains). Integrations are mock/demo and labelled. Nothing is sent
-            anywhere.
+            domains).{" "}
+            {env().LIVE_EXTERNAL_ACTIONS_ENABLED
+              ? "Live integrations are on: records you approve and send go to the configured n8n workflow. Seeded sample exports are mock."
+              : "Integrations are mock/demo and labelled. Nothing is sent anywhere."}
           </div>
         )}
         <main id="main" className="mx-auto max-w-7xl px-4 py-8 sm:px-6">

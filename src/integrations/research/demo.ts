@@ -590,7 +590,9 @@ export class DemoResearchProvider implements ResearchProvider {
       input.offset ??
       (input.seed === "sample"
         ? 0
-        : parseInt(sha256(input.seed).slice(0, 4), 16) % DEMO_POOL.length);
+        : input.seed === "sample-live"
+          ? 24 // companies the seeded mission hasn't seen, plus a couple of duplicates
+          : parseInt(sha256(input.seed).slice(0, 4), 16) % DEMO_POOL.length);
     const now = new Date();
     return Array.from({ length: want }, (_, i) =>
       rowToCandidate(DEMO_POOL[(offset + i) % DEMO_POOL.length], now),

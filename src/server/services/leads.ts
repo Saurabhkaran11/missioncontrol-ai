@@ -227,17 +227,15 @@ export async function patchLead(
         editedByUserId: auth.userId,
         generator: "human-edit",
       });
-      await tx
-        .insert(schema.reviewFindings)
-        .values({
-          organizationId: auth.orgId,
-          missionId: lead.missionId,
-          leadId,
-          draftId: id,
-          round: 99,
-          verdict,
-          findings,
-        });
+      await tx.insert(schema.reviewFindings).values({
+        organizationId: auth.orgId,
+        missionId: lead.missionId,
+        leadId,
+        draftId: id,
+        round: 99,
+        verdict,
+        findings,
+      });
       set.currentDraftId = id;
       changes.draft = {
         version: (prev?.version ?? 0) + 1,
@@ -375,16 +373,14 @@ export async function decideApproval(
       .update(schema.approvalRequests)
       .set({ status: statusFor[input.decision], decidedAt: new Date() })
       .where(eq(schema.approvalRequests.id, a.id));
-    await tx
-      .insert(schema.approvalDecisions)
-      .values({
-        organizationId: auth.orgId,
-        approvalRequestId: a.id,
-        decision: input.decision,
-        reason: input.reason ?? null,
-        payloadHash: a.payloadHash,
-        decidedBy: auth.userId,
-      });
+    await tx.insert(schema.approvalDecisions).values({
+      organizationId: auth.orgId,
+      approvalRequestId: a.id,
+      decision: input.decision,
+      reason: input.reason ?? null,
+      payloadHash: a.payloadHash,
+      decidedBy: auth.userId,
+    });
     if (input.decision === "approve")
       await tx
         .update(schema.leads)
@@ -503,10 +499,16 @@ export async function requestExport(
   db: DB,
   auth: AuthContext,
   missionId: string,
+  opts: { forceMock?: boolean } = {},
 ) {
   const mission = await getOwnedMission(db, auth.orgId, missionId);
   const { resolveLeadSink } = await import("./integrations");
-  const sink = await resolveLeadSink(db, auth.orgId);
+  const { MockLeadSink } = await import("@/integrations/n8n");
+  // Seeded sample decisions are synthetic, so they must never reach a real
+  // destination: the seed forces the mock sink for its export.
+  const sink = opts.forceMock
+    ? new MockLeadSink()
+    : await resolveLeadSink(db, auth.orgId);
   if (mission.mode === "live" && sink.mode === "demo")
     throw conflict(
       "integration_not_configured",
@@ -594,13 +596,11 @@ export async function requestExport(
           idempotencyKey: `${missionId}:alex.summarize:${sumId}`,
         },
       ]);
-      await db
-        .insert(schema.taskDependencies)
-        .values({
-          organizationId: auth.orgId,
-          taskId: sumId,
-          dependsOnTaskId: exportId,
-        });
+      await db.insert(schema.taskDependencies).values({
+        organizationId: auth.orgId,
+        taskId: sumId,
+        dependsOnTaskId: exportId,
+      });
       [exportTask] = await db
         .select()
         .from(schema.missionTasks)

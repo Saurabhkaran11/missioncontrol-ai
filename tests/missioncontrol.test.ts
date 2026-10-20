@@ -71,6 +71,7 @@ import {
   parseAvatarMap,
 } from "@/integrations/masky";
 import { LocalDemoOrchestrator } from "@/integrations/rocketride";
+import { setProvidersForTests } from "@/integrations";
 import { TemplateDraftWriter } from "@/integrations/llm";
 import { hit, resetRateLimits } from "@/server/ratelimit";
 import { seedOrganization, drainMission } from "@/db/seed";
@@ -786,6 +787,32 @@ describe("database, seed and durable queue", () => {
     expect(mine.length).toBe(1);
     expect(await fail(db, mine[0], new Error("boom"), true)).toBe("dead");
   });
+});
+
+describe("seed safety", () => {
+  it("seeded sample decisions never reach a live sink, even when live exports are configured", async () => {
+    const liveCalls: string[] = [];
+    setProvidersForTests({
+      envLeadSink: {
+        id: "spy-live",
+        mode: "live",
+        health: async () => ({ status: "connected", message: "spy", checkedAt: new Date() }),
+        deliver: async (p) => {
+          liveCalls.push(p.idempotencyKey);
+          return { ok: true, mode: "live", externalRef: null, summary: "spy" };
+        },
+      },
+    });
+    try {
+      const r = await seedOrganization(db, { slug: "org-live-safety", orgName: "Org L", owner: { email: "l@l.example", name: "Lee" }, inProgressMission: false });
+      const ds = await db.select().from(schema.webhookDeliveries).where(eq(schema.webhookDeliveries.organizationId, r.orgId));
+      expect(ds.length).toBeGreaterThan(0);
+      expect(ds.every((d) => d.mode === "mock")).toBe(true);
+      expect(liveCalls).toEqual([]);
+    } finally {
+      setProvidersForTests({});
+    }
+  }, 60_000);
 });
 
 describe("tenant isolation", () => {

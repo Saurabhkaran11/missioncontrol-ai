@@ -217,7 +217,7 @@ export function MissionRoom({
               <StatusBadge status={m.status} />
               {m.isSample && <Badge tone="sample">Sample</Badge>}
               <Badge tone={m.mode === "demo" ? "sample" : "accent"}>
-                {m.mode === "demo" ? "demo mode · mock integrations" : "live"}
+                {m.mode === "demo" ? "sample data" : "live data"}
               </Badge>
               <Badge>orchestrator: {m.orchestrator}</Badge>
             </div>
