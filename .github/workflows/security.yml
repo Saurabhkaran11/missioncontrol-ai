@@ -6,6 +6,7 @@ on:
   push: { branches: [main] }
   pull_request:
   schedule: [{ cron: "0 6 * * 1" }]
+  workflow_dispatch:
 permissions:
   contents: read
   security-events: write
@@ -32,11 +33,8 @@ jobs:
         with:
           command: code test
           args: --severity-threshold=high --sarif-file-output=snyk-code.sarif
-      - name: Snyk IaC (Dockerfile, compose, workflows)
-        uses: snyk/actions/iac@master
-        continue-on-error: true
-        with:
-          args: --severity-threshold=high --sarif-file-output=snyk-iac.sarif
+      # Snyk IaC is not run: it covers Terraform/Kubernetes/CloudFormation/ARM,
+      # and this repo has none of those (verified: "Could not find any valid IaC files").
       - name: Build image for container scan
         run: docker build -t missioncontrol:ci .
       - name: Snyk Container
@@ -49,5 +47,8 @@ jobs:
         if: always()
         with: { sarif_file: . }
       # Fail the job only after all reports are uploaded, so findings are visible.
-      - name: Gate on high-severity dependency + code findings
-        run: npx snyk test --severity-threshold=high && npx snyk code test --severity-threshold=high
+      # Gate on production + dev dependencies (accepted exceptions live in .snyk).
+      # Add `&& npx snyk code test --severity-threshold=high` once Snyk Code is
+      # enabled for the Snyk organization (currently returns SNYK-CODE-0005).
+      - name: Gate on high-severity dependency findings
+        run: npx snyk test --dev --severity-threshold=high

@@ -1,0 +1,32 @@
+# Snyk policy. Accepted exceptions only — each has a reason and an expiry so it
+# is re-reviewed. All entries below are DEV-ONLY tooling (lint/test/migration
+# CLIs) that process this repository's own trusted files; none ship in the
+# production image. Production dependencies scan clean (see docs/security.md).
+version: v1.25.0
+ignore:
+  SNYK-JS-BRACES-19963945:
+    - '*':
+        reason: Dev-only (eslint-config-next > fast-glob > micromatch). Globs come from our own lint config, not user input. No fixed release exists (braces 3.0.3 is latest).
+        expires: 2026-11-19T00:00:00.000Z
+        created: 2026-10-20T00:00:00.000Z
+  SNYK-JS-PICOMATCH-21248802:
+    - '*':
+        reason: Dev-only (eslint plugin, vitest, vite). Patterns are our own config. No fixed release exists (picomatch 4.0.7 is latest).
+        expires: 2026-11-19T00:00:00.000Z
+        created: 2026-10-20T00:00:00.000Z
+  SNYK-JS-URIJS-19963961:
+    - '*':
+        reason: Dev-only (eslint > ajv@6). Validates eslint's own rule schemas, never request data. No fixed release exists (uri-js 4.4.1 is latest).
+        expires: 2026-11-19T00:00:00.000Z
+        created: 2026-10-20T00:00:00.000Z
+  SNYK-JS-URIJS-19963963:
+    - '*':
+        reason: Dev-only (eslint > ajv@6). Same as above.
+        expires: 2026-11-19T00:00:00.000Z
+        created: 2026-10-20T00:00:00.000Z
+  SNYK-JS-URIJS-20341609:
+    - '*':
+        reason: Dev-only (eslint > ajv@6). Same as above.
+        expires: 2026-11-19T00:00:00.000Z
+        created: 2026-10-20T00:00:00.000Z
+patch: {}

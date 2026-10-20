@@ -104,10 +104,15 @@ function snykStatus(): {
       ranAt: string;
       results: Record<string, { exitCode: number; summary: string }>;
     };
-    const codes = Object.values(s.results).map((r) => r.exitCode);
-    const status: IntegrationStatus = codes.every((c) => c === 0)
+    // A scan that could not run because the feature is off (e.g. Snyk Code
+    // not enabled) is a coverage gap, not a failure: shown as degraded.
+    const results = Object.values(s.results);
+    const failed = results.filter(
+      (r) => r.exitCode === 2 && !/not enabled/i.test(r.summary),
+    );
+    const status: IntegrationStatus = results.every((r) => r.exitCode === 0)
       ? "connected"
-      : codes.some((c) => c === 2)
+      : failed.length
         ? "error"
         : "degraded";
     return {
