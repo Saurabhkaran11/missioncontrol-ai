@@ -12,7 +12,8 @@ A supervised AI operations team for early-stage B2B SaaS founders. You state a g
 Hackathon prototype (Business, Growth & Productivity track). **Not production-ready**; see `docs/security.md` for residual risks.
 
 ## Demo & submission
-- **Demo video:** [`demo/missioncontrol-demo.webm`](demo/missioncontrol-demo.webm) (2 min, captioned)
+- **Demo video (with narration):** [`demo/missioncontrol-demo.mp4`](demo/missioncontrol-demo.mp4)
+- **Slide deck (PDF):** [`docs/MissionControl-AI-deck.pdf`](docs/MissionControl-AI-deck.pdf)
 - **Description and demo script:** [`docs/submission.md`](docs/submission.md)
 - **Get a live URL:** [`docs/deploy-live.md`](docs/deploy-live.md)
 

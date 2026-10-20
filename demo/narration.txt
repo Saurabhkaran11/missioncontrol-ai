@@ -1,0 +1,9 @@
+MissionControl AI is a supervised AI operations team for early-stage B2B SaaS founders. Six synthetic agents research, qualify and draft outreach, and nothing leaves without a human decision.
+Here are the integrations, verified against live accounts. RocketRide runs the mission tasks. Masky gives the agents faces. And n8n receives only the leads you approve.
+This is the live mission room. Alex assigns the work, and each handoff streams in as a structured event: Maya researches, Leo scores, Sophia drafts, and Sam reviews.
+The task graph and activity feed show every step. There is no hidden model reasoning, only accountable steps.
+Now a completed mission. Sam sent Ledgerline back, because its source does not say the company is expanding into Europe. Sophia revised the draft. A prospect page tried a prompt injection, which was flagged as data and routed to a person.
+In approvals, the evidence, the draft and Sam's verdict sit side by side. You approve one exact version. Edit it later, and the approval no longer counts.
+Releasing the approved records sends them through Jordan to n8n, which writes them to Google Sheets. Repeated sends update the same row, so nothing is duplicated.
+Results count what was researched, qualified, approved and exported. Drafts are never reported as sent.
+Agents prepare the work. People make the decisions. The repository has setup steps, and the demo runs with no credentials.

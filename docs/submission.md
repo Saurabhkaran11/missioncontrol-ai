@@ -2,7 +2,8 @@
 
 **Track:** Business, Growth & Productivity
 **Repo:** https://github.com/Saurabhkaran11/missioncontrol-ai
-**Demo video:** `demo/missioncontrol-demo.webm` (2 min, captioned)
+**Demo video:** `demo/missioncontrol-demo.mp4` (2 min, narrated and captioned)
+**Slide deck:** `docs/MissionControl-AI-deck.pdf`
 
 ## Short description (≈60 words)
 MissionControl AI gives early-stage B2B SaaS founders a supervised AI operations team. Six synthetic agents work together to find prospects:
